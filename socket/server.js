@@ -36,7 +36,7 @@ let isResponding = false; // Drapeau pour indiquer si une réponse est en cours
 
 client.on("message", function (topic, message) {
   const receivedMessage = message.toString();
-  // console.log(`Received message: ${receivedMessage} on topic: ${topic}`);
+  console.log(`Received message: ${receivedMessage} on topic: ${topic}`);
 
   // Vérifier si le message reçu est différent du dernier envoyé
   if (!isResponding && receivedMessage !== lastReceivedMessage) {
@@ -102,7 +102,6 @@ serialport.on("open", function () {
     command: "NI",
     commandParameter: [],
   };
-
   xbeeAPI.builder.write(frame_obj);
 
   frame_obj = {
@@ -119,25 +118,12 @@ serialport.on("open", function () {
 xbeeAPI.parser.on("data", function (frame) {
   if (C.FRAME_TYPE.ZIGBEE_RECEIVE_PACKET === frame.type) {
     console.log("C.FRAME_TYPE.ZIGBEE_RECEIVE_PACKET");
+
     let dataReceived = String.fromCharCode.apply(null, frame.data);
+
     console.log(">> ZIGBEE_RECEIVE_PACKET >", dataReceived);
   } else if (C.FRAME_TYPE.NODE_IDENTIFICATION === frame.type) {
     console.log("NODE_IDENTIFICATION");
-
-    // {
-    //   type: 149,
-    //   sender64: '0013a20041582fc0',
-    //   sender16: '70d4',
-    //   receiveOptions: 2,
-    //   remote16: '70d4',
-    //   remote64: '0013a20041582fc0',
-    //   nodeIdentifier: 'entree',
-    //   remoteParent16: 'fffe',
-    //   deviceType: 1,
-    //   sourceEvent: 3,
-    //   digiProfileID: 'c105',
-    //   digiManufacturerID: '101e'
-    // }
 
     if (frame.nodeIdentifier === "entree") macEntree = frame.remote64;
     if (frame.nodeIdentifier === "sortie") macSortie = frame.remote64;
@@ -146,11 +132,9 @@ xbeeAPI.parser.on("data", function (frame) {
     // storage.registerSensor(frame.remote64)
   } else if (C.FRAME_TYPE.ZIGBEE_IO_DATA_SAMPLE_RX === frame.type) {
     console.log("ZIGBEE_IO_DATA_SAMPLE_RX");
-    console.log(frame.analogSamples.AD0); // Trier les valeurs du photocapteur
-    // console.log("FRAME LOG", frame.remote64, macEntree);
+    console.log(frame.analogSamples.AD0);
 
     if (frame.remote64 === macEntree && frame.analogSamples.AD0 < 800) {
-      // envoi d'instruction d'ouverture 0x10: ZigBee Transmit Request
       openDoor(frame.remote64);
     } else if (frame.remote64 === macSortie && frame.analogSamples.AD > 800) {
       closeDoor(frame.remote64);
@@ -183,23 +167,20 @@ function sendCommand(remote64, instruction) {
     return;
   }
   let frame_obj = {};
-  console.log("///", remote64);
   frame_obj = {
-    type: C.FRAME_TYPE.ZIGBEE_TRANSMIT_REQUEST, // xbee_api.constants.FRAME_TYPE.ZIGBEE_TRANSMIT_REQUEST
-    destination64: remote64.remoteAddress, //Envoyer l'adresse MAC en dynamique
-    data: instruction, // Can either be string or byte array.
+    type: C.FRAME_TYPE.ZIGBEE_TRANSMIT_REQUEST,
+    destination64: remote64.remoteAddress,
+    data: instruction,
   };
   xbeeAPI.builder.write(frame_obj);
 }
 
 function sendCommandToArduino(topic) {
-  let destination64 = ""; // Remplacez par l'adresse MAC du module XBee connecté à l'Arduino
-
+  let destination64 = "";
   if (topic === "parking/barriere/entree") {
     openDoor(macEntree);
   } else if (topic === "parking/barriere/sortie") {
     openDoor(macSortie);
   }
-
   sendCommand(destination64);
 }
