@@ -3,6 +3,7 @@ const client = mqtt.connect("mqtt://test.mosquitto.org");
 const SerialPort = require("serialport");
 const xbee_api = require("xbee-api");
 const C = xbee_api.constants;
+const lumenStatus = 800;
 
 // MAC Network
 macEntree = null;
@@ -134,9 +135,12 @@ xbeeAPI.parser.on("data", function (frame) {
     console.log("ZIGBEE_IO_DATA_SAMPLE_RX");
     console.log(frame.analogSamples.AD0);
 
-    if (frame.remote64 === macEntree && frame.analogSamples.AD0 < 800) {
+    if (frame.remote64 === macEntree && frame.analogSamples.AD0 < lumenStatus) {
       openDoor(frame.remote64);
-    } else if (frame.remote64 === macSortie && frame.analogSamples.AD > 800) {
+    } else if (
+      frame.remote64 === macSortie &&
+      frame.analogSamples.AD > lumenStatus
+    ) {
       closeDoor(frame.remote64);
     }
     client.publish("parking/barriere/entree", "" + frame.analogSamples.AD0);
